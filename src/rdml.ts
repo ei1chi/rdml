@@ -24,6 +24,9 @@ namespace rdml {
         return loaded;
     }
 
+    export function callProc(file: string, proc: string) {
+    }
+
     /**
      * Internal
      */
