@@ -1,0 +1,3 @@
+[submodule "src/decl"]
+	path = src/decl
+	url = git@github.com:ei1chi/rpgmakermv_typescript_dts.git

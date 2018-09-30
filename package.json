@@ -1,0 +1,24 @@
+{
+  "name": "rpgml",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ei1chi/rpgml.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ei1chi/rpgml/issues"
+  },
+  "homepage": "https://github.com/ei1chi/rpgml#readme",
+  "devDependencies": {
+    "@types/pixi.js": "^4.8.1",
+    "pixi-tilemap": "^1.2.4"
+  }
+}

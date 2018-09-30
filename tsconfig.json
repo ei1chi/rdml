@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"target": "es5",
+		"outFile": "dist/RDML.js",
+		"strict": true,
+		"esModuleInterop": true,
+		"baseUrl": ".",
+		"paths": {
+			"*": ["src/decl/typings/*"]
+		},
+		"lib": ["es5"],
+		"newLine": "LF"
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "src/decl/sample_code/*"]
+}
