@@ -330,4 +330,54 @@ namespace rdml {
         ),
     };
     // }}}
+
+    /**
+     * 条件付き選択肢の実装
+     */
+    export namespace conditionalChoices {
+        export interface Cmd {
+            symbols: string[]; // 内部表現、被りなし
+            texts: string[]; // 表示名
+            conds: string[]; // 条件文
+            defaultType: number;
+            cancelType: number;
+            positionType: number;
+            background: number;
+        }
+
+        let cmds: Cmd[] = [];
+
+        export function push(cmd: Cmd): number {
+            cmds.push(cmd);
+            return cmds.length - 1;
+        }
+
+        export function setup(i: Game_Interpreter, id: number) {
+            const cmd = cmds[id];
+
+            // 呼ばれた時点で条件を満たす選択肢のみ集める
+            // 選択肢(シンボル)と表示名は別
+            let choices: string[] = [];
+            let texts: string[] = [];
+            for (let j = 0; j < cmd.symbols.length; j++) {
+                if (cmd.conds[j] === "" || !!eval(cmd.conds[j])) {
+                    choices.push(cmd.symbols[j]);
+                    texts.push(cmd.texts[j]);
+                }
+            }
+
+            const cancelType = cmd.cancelType >= choices.length ? -2 : cmd.cancelType;
+            $gameMessage.setChoices(texts, cmd.defaultType, cancelType);
+            $gameMessage.setChoiceBackground(cmd.background);
+            $gameMessage.setChoicePositionType(cmd.positionType);
+            // コールバックの中身が重要
+            $gameMessage.setChoiceCallback(function(this: Game_Interpreter, n: number) {
+                // 有効な選択肢のみが表示されている
+                // -> nとchoicesから選択肢固有のシンボルを得る
+                // -> シンボルと全体のシンボルリストを照らし合わせてインデックスを得る
+                const sym = choices[n];
+                this._branch[this._indent] = cmd.symbols.indexOf(sym);
+            }.bind(i));
+        }
+    }
 }

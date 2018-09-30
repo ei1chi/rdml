@@ -64,6 +64,12 @@ namespace rdml {
         if (subcmd === "load") {
             rdml.load(args[1]);
         }
+
+        if (subcmd === "conditional-choices") {
+            const id = Number(args[0]);
+            rdml.conditionalChoices.setup(this, id);
+            this.setWaitMode("message");
+        }
     }
 
     const __updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
