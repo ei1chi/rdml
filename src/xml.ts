@@ -39,46 +39,36 @@ namespace rdml.xml {
         }
 
         // validators
-        require(id: string) {
-            if (!(id in this.attrs)) {
-                throw new check.ValError(`element ${this.name}: requires attribute ${id}`);
+        float(id: string, def: number | null, min: number | null, max: number | null): number {
+            try {
+                return check.float(this.attrs[id], def, min, max);
+            } catch (e) {
+                throw new AttrError(this.name, id, e);
             }
         }
 
-        requireInt(id: string, min?: number, max?: number): number {
-            this.require(id);
-            return check.int(this.attrs[id], 0, min, max);
+        int(id: string, def: number | null, min: number | null, max: number | null) {
+            try {
+                return check.int(this.attrs[id], def, min, max);
+            } catch (e) {
+                throw new AttrError(this.name, id, e);
+            }
         }
 
-        int(id: string, def: number, min?: number, max?: number) {
-            return check.int(this.attrs[id], def, min, max);
+        word(id: string, def: string | null, rules: check.stringRules) {
+            try {
+                return check.word(this.attrs[id], def, rules);
+            } catch (e) {
+                throw new AttrError(this.name, id, e);
+            }
         }
 
-        requireFloat(id: string, min?: number, max?: number): number {
-            this.require(id);
-            return check.float(this.attrs[id], 0, min, max);
-        }
-
-        float(id: string, def: number, min?: number, max?: number) {
-            return check.float(this.attrs[id], def, min, max);
-        }
-
-        requireWord(id: string, rules?: check.stringRules) {
-            this.require(id);
-            return check.word(this.attrs[id], "", rules);
-        }
-
-        word(id: string, def: string, rules?: check.stringRules) {
-            return check.word(this.attrs[id], def, rules);
-        }
-
-        requireBool(id: string) {
-            this.require(id);
-            return check.bool(this.attrs[id], false);
-        }
-
-        bool(id: string, def: boolean) {
-            return check.bool(this.attrs[id], def);
+        bool(id: string, def: boolean | null) {
+            try {
+                return check.bool(this.attrs[id], def);
+            } catch (e) {
+                throw new AttrError(this.name, id, e);
+            }
         }
 
         split(id: string, length: number): string[] {
@@ -301,6 +291,17 @@ namespace rdml.xml {
 
         pushError(message: string) {
             this.errors.push(new ParseError(message));
+        }
+    }
+
+    class AttrError implements Error {
+        public name = "AttributeError";
+        public message = "";
+        constructor(elem: string, attr: string, e: check.ValError) {
+            this.message = `elem ${elem}, attr ${attr}: ${e.message}`;
+        }
+        toString() {
+            return `${this.name}: ${this.message}`;
         }
     }
 
