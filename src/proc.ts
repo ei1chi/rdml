@@ -244,7 +244,7 @@ namespace rdml {
 
         "erase-pict": new CmdTemplate(
             235, false,
-            (e: Elem) => [e.int("id", required, 0, 100)],
+            (e: Elem) => [e.int("id", 0, 100, required)],
         ),
 
         weather: new CmdTemplate(

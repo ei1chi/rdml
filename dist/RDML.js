@@ -479,7 +479,7 @@ var rdml;
             params[3] = e.bool("wait", true);
             return params;
         }),
-        "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", required, 0, 100)]; }),
+        "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", 0, 100, required)]; }),
         weather: new CmdTemplate(236, false, function (e) { return [
             e.word("type", {}, required),
             e.int("power", 0, 9, 5),
