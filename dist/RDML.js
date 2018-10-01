@@ -63,38 +63,37 @@ var rdml;
                 configurable: true
             });
             // validators
-            Element.prototype.require = function (id) {
-                if (!(id in this.attrs)) {
-                    throw new rdml.check.ValError("element " + this.name + ": requires attribute " + id);
+            Element.prototype.float = function (id, def, min, max) {
+                try {
+                    return rdml.check.float(this.attrs[id], def, min, max);
+                }
+                catch (e) {
+                    throw new AttrError(this.name, id, e);
                 }
             };
-            Element.prototype.requireInt = function (id, min, max) {
-                this.require(id);
-                return rdml.check.int(this.attrs[id], 0, min, max);
-            };
             Element.prototype.int = function (id, def, min, max) {
-                return rdml.check.int(this.attrs[id], def, min, max);
-            };
-            Element.prototype.requireFloat = function (id, min, max) {
-                this.require(id);
-                return rdml.check.float(this.attrs[id], 0, min, max);
-            };
-            Element.prototype.float = function (id, def, min, max) {
-                return rdml.check.float(this.attrs[id], def, min, max);
-            };
-            Element.prototype.requireWord = function (id, rules) {
-                this.require(id);
-                return rdml.check.word(this.attrs[id], "", rules);
+                try {
+                    return rdml.check.int(this.attrs[id], def, min, max);
+                }
+                catch (e) {
+                    throw new AttrError(this.name, id, e);
+                }
             };
             Element.prototype.word = function (id, def, rules) {
-                return rdml.check.word(this.attrs[id], def, rules);
-            };
-            Element.prototype.requireBool = function (id) {
-                this.require(id);
-                return rdml.check.bool(this.attrs[id], false);
+                try {
+                    return rdml.check.word(this.attrs[id], def, rules);
+                }
+                catch (e) {
+                    throw new AttrError(this.name, id, e);
+                }
             };
             Element.prototype.bool = function (id, def) {
-                return rdml.check.bool(this.attrs[id], def);
+                try {
+                    return rdml.check.bool(this.attrs[id], def);
+                }
+                catch (e) {
+                    throw new AttrError(this.name, id, e);
+                }
             };
             Element.prototype.split = function (id, length) {
                 if (!(id in this.attrs)) {
@@ -308,6 +307,17 @@ var rdml;
             };
             return Parser;
         }());
+        var AttrError = /** @class */ (function () {
+            function AttrError(elem, attr, e) {
+                this.name = "AttributeError";
+                this.message = "";
+                this.message = "elem " + elem + ", attr " + attr + ": " + e.message;
+            }
+            AttrError.prototype.toString = function () {
+                return this.name + ": " + this.message;
+            };
+            return AttrError;
+        }());
         var ParseError = /** @class */ (function () {
             function ParseError(message) {
                 this.message = message;
@@ -361,18 +371,19 @@ var rdml;
         return CmdTemplate;
     }());
     var noParam = function (e) { return []; };
+    var required = null;
     var creators = {
         // set options, to start message
         "message options": new CmdTemplate(101, false, function (e) { return ["", 0, 0, 2]; }),
         // input a number
         input: new CmdTemplate(103, false, function (e) { return [
-            indexOfVar(e.requireWord("var")),
-            e.requireInt("digits")
+            indexOfVar(e.word("var", required, {})),
+            e.int("digits", required, 1, null),
         ]; }),
         // select item
         "select-item": new CmdTemplate(104, false, function (e) { return [
-            indexOfVar(e.requireWord("var")),
-            e.requireInt("type", 0, 3)
+            indexOfVar(e.word("var", required, {})),
+            e.int("type", required, 0, 3),
         ]; }),
         // TODO scrolling message
         // TODO scrolling message content
@@ -401,28 +412,28 @@ var rdml;
         // tint screen
         tint: new CmdTemplate(223, false, function (e) { return [
             e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); }),
-            e.int("duration", 60, 0),
+            e.int("duration", 60, 1, null),
             e.bool("wait", true),
         ]; }),
         // flash screen
         flash: new CmdTemplate(224, false, function (e) { return [
             e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); }),
-            e.int("duration", 60, 0),
+            e.int("duration", 60, 1, null),
             e.bool("wait", true),
         ]; }),
         // shake screen
         shake: new CmdTemplate(225, false, function (e) { return [
-            e.requireInt("power", 0, 9),
-            e.requireInt("speed", 0, 9),
+            e.int("power", required, 0, 9),
+            e.int("speed", required, 0, 9),
             e.bool("wait", true),
         ]; }),
-        wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, 0, 0)]; }),
+        wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, required, 1, null)]; }),
         "show-pict": new CmdTemplate(231, false, function (e) {
             var params = [];
-            params[0] = e.requireInt("id", 0, 100);
+            params[0] = e.int("id", required, 0, 100);
             params[1] = e.data.trim();
             var pos = e.split("pos", 3);
-            var origin = rdml.check.word(pos[0], "lefttop");
+            var origin = rdml.check.word(pos[0], "lefttop", {});
             if (origin === "lefttop") {
                 params[2] = 0;
             }
@@ -431,14 +442,14 @@ var rdml;
             }
             else {
             }
-            params[4] = rdml.check.float(pos[1], 0);
-            params[5] = rdml.check.float(pos[2], 0);
+            params[4] = rdml.check.float(pos[1], 0, null, null);
+            params[5] = rdml.check.float(pos[2], 0, null, null);
             var scale = e.split("scale", 2);
-            params[6] = rdml.check.float(scale[0], 100);
-            params[7] = rdml.check.float(scale[1], 100);
+            params[6] = rdml.check.float(scale[0], 100, null, null);
+            params[7] = rdml.check.float(scale[1], 100, null, null);
             params[8] = e.int("opacity", 255, 0, 255);
             params[9] = 0; // default
-            var blend = e.word("blend", "normal");
+            var blend = e.word("blend", "normal", {});
             var modes = {
                 normal: 0,
                 add: 1,
@@ -457,30 +468,30 @@ var rdml;
             return [];
         }),
         "rotate-pict": new CmdTemplate(233, false, function (e) { return [
-            e.requireInt("id", 0, 100),
-            e.requireFloat("speed"),
+            e.int("id", required, 0, 100),
+            e.float("speed", 0, null, null),
         ]; }),
         "tint-pict": new CmdTemplate(234, false, function (e) {
             var params = [];
-            params[0] = e.requireInt("id", 0, 100);
+            params[0] = e.int("id", required, 0, 100);
             params[1] = e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); });
-            params[2] = e.int("duration", 60, 0);
+            params[2] = e.int("duration", 60, 1, null);
             params[3] = e.bool("wait", true);
             return params;
         }),
-        "erase-pict": new CmdTemplate(235, false, function (e) { return [e.requireInt("id", 0, 100)]; }),
+        "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", required, 0, 100)]; }),
         weather: new CmdTemplate(236, false, function (e) { return [
-            e.requireWord("type"),
+            e.word("type", required, {}),
             e.int("power", 5, 0, 9),
-            e.int("duration", 60, 0),
+            e.int("duration", 60, 1, null),
             e.bool("wait", true),
         ]; }),
         bgm: new CmdTemplate(241, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.requireFloat("duration")]; }),
+        "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.float("duration", required, 0, null)]; }),
         "save-bgm": new CmdTemplate(243, false, noParam),
         "resume-bgm": new CmdTemplate(244, false, noParam),
         bgs: new CmdTemplate(245, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.requireFloat("duration")]; }),
+        "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.float("duration", required, 0, null)]; }),
         me: new CmdTemplate(249, false, function (e) { return [e.data.trim()]; }),
         se: new CmdTemplate(250, false, function (e) { return [e.data.trim()]; }),
         "stop-se": new CmdTemplate(251, false, noParam),
@@ -631,15 +642,20 @@ var rdml;
         check.ValError = ValError;
         function float(s, def, min, max) {
             if (s === undefined) {
-                return def;
+                if (def === null) { // required
+                    throw new ValError("required");
+                }
+                else {
+                    return def;
+                }
             }
             var f = parseFloat(s);
-            if (min) {
+            if (min !== null) {
                 if (f < min) {
                     throw new ValError("check.int: " + s + " must not smaller than " + min);
                 }
             }
-            if (max) {
+            if (max !== null) {
                 if (max < f) {
                     throw new ValError("check.int: " + s + " must not larger than " + max);
                 }
@@ -649,34 +665,42 @@ var rdml;
         check.float = float;
         function int(s, def, min, max) {
             if (s === undefined) {
-                return def;
+                if (def === null) { // required
+                    throw new ValError("required");
+                }
+                else {
+                    return def;
+                }
             }
             var f = check.float(s, def, min, max);
             var i = parseInt(s);
             if (i !== f) {
-                throw new ValError("check.int: " + s + " must be int, not be float");
+                throw new ValError("check.int: " + s + " must be int, not float");
             }
             return i;
         }
         check.int = int;
         function word(s, def, rules) {
             if (s === undefined) {
-                return def;
+                if (def === null) { // required
+                    throw new ValError("required");
+                }
+                else {
+                    return def;
+                }
             }
             s = s.trim();
-            if (rules) {
-                if (rules.re) {
-                    if (!rules.re.test(s)) {
-                        throw new ValError("check.word: " + s + " unmatches " + rules.re.toString());
-                    }
+            if (rules.re) {
+                if (!rules.re.test(s)) {
+                    throw new ValError("check.word: " + s + " unmatches " + rules.re.toString());
                 }
-                if (rules.length) {
-                    if (s.length < rules.length[0]) {
-                        throw new ValError("check.word: " + s + " must not be shorter than " + rules.length[0]);
-                    }
-                    if (rules.length[1] < s.length) {
-                        throw new ValError("check.word: " + s + " must not be longer than " + rules.length[1]);
-                    }
+            }
+            if (rules.length) {
+                if (s.length < rules.length[0]) {
+                    throw new ValError("check.word: " + s + " must not be shorter than " + rules.length[0]);
+                }
+                if (rules.length[1] < s.length) {
+                    throw new ValError("check.word: " + s + " must not be longer than " + rules.length[1]);
                 }
             }
             return s;
@@ -684,7 +708,12 @@ var rdml;
         check.word = word;
         function bool(s, def) {
             if (s === undefined) {
-                return def;
+                if (def === null) { // required
+                    throw new ValError("required");
+                }
+                else {
+                    return def;
+                }
             }
             s = s.trim();
             if (s === "on" || s === "true") {
@@ -693,7 +722,7 @@ var rdml;
             else if (s === "off" || s === "false") {
                 return false;
             }
-            throw new ValError("check.bool: invalid string as boolean " + s);
+            throw new ValError("check.bool: " + s + " is invalid string as boolean");
         }
         check.bool = bool;
     })(check = rdml.check || (rdml.check = {}));
