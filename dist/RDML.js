@@ -63,25 +63,25 @@ var rdml;
                 configurable: true
             });
             // validators
-            Element.prototype.float = function (id, def, min, max) {
+            Element.prototype.float = function (id, min, max, def) {
                 try {
-                    return rdml.check.float(this.attrs[id], def, min, max);
+                    return rdml.check.float(this.attrs[id], min, max, def);
                 }
                 catch (e) {
                     throw new AttrError(this.name, id, e);
                 }
             };
-            Element.prototype.int = function (id, def, min, max) {
+            Element.prototype.int = function (id, min, max, def) {
                 try {
-                    return rdml.check.int(this.attrs[id], def, min, max);
+                    return rdml.check.int(this.attrs[id], min, max, def);
                 }
                 catch (e) {
                     throw new AttrError(this.name, id, e);
                 }
             };
-            Element.prototype.word = function (id, def, rules) {
+            Element.prototype.word = function (id, rules, def) {
                 try {
-                    return rdml.check.word(this.attrs[id], def, rules);
+                    return rdml.check.word(this.attrs[id], rules, def);
                 }
                 catch (e) {
                     throw new AttrError(this.name, id, e);
@@ -377,13 +377,13 @@ var rdml;
         "message options": new CmdTemplate(101, false, function (e) { return ["", 0, 0, 2]; }),
         // input a number
         input: new CmdTemplate(103, false, function (e) { return [
-            indexOfVar(e.word("var", required, {})),
-            e.int("digits", required, 1, null),
+            indexOfVar(e.word("var", {}, required)),
+            e.int("digits", 1, null, required),
         ]; }),
         // select item
         "select-item": new CmdTemplate(104, false, function (e) { return [
-            indexOfVar(e.word("var", required, {})),
-            e.int("type", required, 0, 3),
+            indexOfVar(e.word("var", {}, required)),
+            e.int("type", 0, 3, required),
         ]; }),
         // TODO scrolling message
         // TODO scrolling message content
@@ -411,29 +411,29 @@ var rdml;
         ]; }),
         // tint screen
         tint: new CmdTemplate(223, false, function (e) { return [
-            e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); }),
-            e.int("duration", 60, 1, null),
+            e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
+            e.int("duration", 1, null, 60),
             e.bool("wait", true),
         ]; }),
         // flash screen
         flash: new CmdTemplate(224, false, function (e) { return [
-            e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); }),
-            e.int("duration", 60, 1, null),
+            e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
+            e.int("duration", 1, null, 60),
             e.bool("wait", true),
         ]; }),
         // shake screen
         shake: new CmdTemplate(225, false, function (e) { return [
-            e.int("power", required, 0, 9),
-            e.int("speed", required, 0, 9),
+            e.int("power", 0, 9, required),
+            e.int("speed", 0, 9, required),
             e.bool("wait", true),
         ]; }),
-        wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, required, 1, null)]; }),
+        wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, 1, null, required)]; }),
         "show-pict": new CmdTemplate(231, false, function (e) {
             var params = [];
-            params[0] = e.int("id", required, 0, 100);
+            params[0] = e.int("id", 0, 100, required);
             params[1] = e.data.trim();
             var pos = e.split("pos", 3);
-            var origin = rdml.check.word(pos[0], "lefttop", {});
+            var origin = rdml.check.word(pos[0], {}, "lefttop");
             if (origin === "lefttop") {
                 params[2] = 0;
             }
@@ -442,14 +442,14 @@ var rdml;
             }
             else {
             }
-            params[4] = rdml.check.float(pos[1], 0, null, null);
-            params[5] = rdml.check.float(pos[2], 0, null, null);
+            params[4] = rdml.check.float(pos[1], null, null, 0);
+            params[5] = rdml.check.float(pos[2], null, null, 0);
             var scale = e.split("scale", 2);
-            params[6] = rdml.check.float(scale[0], 100, null, null);
-            params[7] = rdml.check.float(scale[1], 100, null, null);
-            params[8] = e.int("opacity", 255, 0, 255);
+            params[6] = rdml.check.float(scale[0], null, null, 100);
+            params[7] = rdml.check.float(scale[1], null, null, 100);
+            params[8] = e.int("opacity", 0, 255, 255);
             params[9] = 0; // default
-            var blend = e.word("blend", "normal", {});
+            var blend = e.word("blend", {}, "normal");
             var modes = {
                 normal: 0,
                 add: 1,
@@ -468,30 +468,30 @@ var rdml;
             return [];
         }),
         "rotate-pict": new CmdTemplate(233, false, function (e) { return [
-            e.int("id", required, 0, 100),
-            e.float("speed", 0, null, null),
+            e.int("id", 0, 100, required),
+            e.float("speed", null, null, 0),
         ]; }),
         "tint-pict": new CmdTemplate(234, false, function (e) {
             var params = [];
-            params[0] = e.int("id", required, 0, 100);
-            params[1] = e.split("color", 4).map(function (c) { return rdml.check.int(c, 255, 0, 255); });
-            params[2] = e.int("duration", 60, 1, null);
+            params[0] = e.int("id", 0, 100, required);
+            params[1] = e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); });
+            params[2] = e.int("duration", 1, null, 60);
             params[3] = e.bool("wait", true);
             return params;
         }),
         "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", required, 0, 100)]; }),
         weather: new CmdTemplate(236, false, function (e) { return [
-            e.word("type", required, {}),
-            e.int("power", 5, 0, 9),
-            e.int("duration", 60, 1, null),
+            e.word("type", {}, required),
+            e.int("power", 0, 9, 5),
+            e.int("duration", 1, null, 60),
             e.bool("wait", true),
         ]; }),
         bgm: new CmdTemplate(241, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.float("duration", required, 0, null)]; }),
+        "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.float("duration", 0, null, required)]; }),
         "save-bgm": new CmdTemplate(243, false, noParam),
         "resume-bgm": new CmdTemplate(244, false, noParam),
         bgs: new CmdTemplate(245, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.float("duration", required, 0, null)]; }),
+        "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.float("duration", 0, null, required)]; }),
         me: new CmdTemplate(249, false, function (e) { return [e.data.trim()]; }),
         se: new CmdTemplate(250, false, function (e) { return [e.data.trim()]; }),
         "stop-se": new CmdTemplate(251, false, noParam),
@@ -640,7 +640,7 @@ var rdml;
             return ValError;
         }());
         check.ValError = ValError;
-        function float(s, def, min, max) {
+        function float(s, min, max, def) {
             if (s === undefined) {
                 if (def === null) { // required
                     throw new ValError("required");
@@ -663,7 +663,7 @@ var rdml;
             return f;
         }
         check.float = float;
-        function int(s, def, min, max) {
+        function int(s, min, max, def) {
             if (s === undefined) {
                 if (def === null) { // required
                     throw new ValError("required");
@@ -680,7 +680,7 @@ var rdml;
             return i;
         }
         check.int = int;
-        function word(s, def, rules) {
+        function word(s, rules, def) {
             if (s === undefined) {
                 if (def === null) { // required
                     throw new ValError("required");

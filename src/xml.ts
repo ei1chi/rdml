@@ -39,25 +39,25 @@ namespace rdml.xml {
         }
 
         // validators
-        float(id: string, def: number | null, min: number | null, max: number | null): number {
+        float(id: string, min: number | null, max: number | null, def: number | null): number {
             try {
-                return check.float(this.attrs[id], def, min, max);
+                return check.float(this.attrs[id], min, max, def);
             } catch (e) {
                 throw new AttrError(this.name, id, e);
             }
         }
 
-        int(id: string, def: number | null, min: number | null, max: number | null) {
+        int(id: string, min: number | null, max: number | null, def: number | null) {
             try {
-                return check.int(this.attrs[id], def, min, max);
+                return check.int(this.attrs[id], min, max, def);
             } catch (e) {
                 throw new AttrError(this.name, id, e);
             }
         }
 
-        word(id: string, def: string | null, rules: check.stringRules) {
+        word(id: string, rules: check.stringRules, def: string | null) {
             try {
-                return check.word(this.attrs[id], def, rules);
+                return check.word(this.attrs[id], rules, def);
             } catch (e) {
                 throw new AttrError(this.name, id, e);
             }

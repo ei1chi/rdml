@@ -65,8 +65,8 @@ namespace rdml {
         input: new CmdTemplate(
             103, false,
             (e: Elem) => [
-                indexOfVar(e.word("var", required, {})),
-                e.int("digits", required, 1, null),
+                indexOfVar(e.word("var", {}, required)),
+                e.int("digits", 1, null, required),
             ]
         ),
 
@@ -74,8 +74,8 @@ namespace rdml {
         "select-item": new CmdTemplate(
             104, false,
             (e: Elem) => [
-                indexOfVar(e.word("var", required, {})),
-                e.int("type", required, 0, 3),
+                indexOfVar(e.word("var", {}, required)),
+                e.int("type", 0, 3, required),
             ]
         ),
 
@@ -139,8 +139,8 @@ namespace rdml {
         tint: new CmdTemplate(
             223, false,
             (e: Elem) => [
-                e.split("color", 4).map(c => check.int(c, 255, 0, 255)),
-                e.int("duration", 60, 1, null),
+                e.split("color", 4).map(c => check.int(c, 0, 255, 255)),
+                e.int("duration", 1, null, 60),
                 e.bool("wait", true),
             ]
         ),
@@ -149,8 +149,8 @@ namespace rdml {
         flash: new CmdTemplate(
             224, false,
             (e: Elem) => [
-                e.split("color", 4).map(c => check.int(c, 255, 0, 255)),
-                e.int("duration", 60, 1, null),
+                e.split("color", 4).map(c => check.int(c, 0, 255, 255)),
+                e.int("duration", 1, null, 60),
                 e.bool("wait", true),
             ]
         ),
@@ -159,15 +159,15 @@ namespace rdml {
         shake: new CmdTemplate(
             225, false,
             (e: Elem) => [
-                e.int("power", required, 0, 9),
-                e.int("speed", required, 0, 9),
+                e.int("power", 0, 9, required),
+                e.int("speed", 0, 9, required),
                 e.bool("wait", true),
             ]
         ),
 
         wait: new CmdTemplate(
             230, false,
-            (e: Elem) => [check.int(e.data, required, 1, null)]
+            (e: Elem) => [check.int(e.data, 1, null, required)]
         ),
 
         "show-pict": new CmdTemplate(
@@ -175,11 +175,11 @@ namespace rdml {
             (e: Elem) => {
                 let params: Param[] = [];
 
-                params[0] = e.int("id", required, 0, 100);
+                params[0] = e.int("id", 0, 100, required);
                 params[1] = e.data.trim();
 
                 const pos = e.split("pos", 3);
-                const origin = check.word(pos[0], "lefttop", {});
+                const origin = check.word(pos[0], {}, "lefttop");
                 if (origin === "lefttop") {
                     params[2] = 0;
                 } else if (origin === "center") {
@@ -187,17 +187,17 @@ namespace rdml {
                 } else {
                 }
 
-                params[4] = check.float(pos[1], 0, null, null);
-                params[5] = check.float(pos[2], 0, null, null);
+                params[4] = check.float(pos[1], null, null, 0);
+                params[5] = check.float(pos[2], null, null, 0);
 
                 const scale = e.split("scale", 2);
-                params[6] = check.float(scale[0], 100, null, null);
-                params[7] = check.float(scale[1], 100, null, null);
+                params[6] = check.float(scale[0], null, null, 100);
+                params[7] = check.float(scale[1], null, null, 100);
 
-                params[8] = e.int("opacity", 255, 0, 255);
+                params[8] = e.int("opacity", 0, 255, 255);
 
                 params[9] = 0; // default
-                const blend = e.word("blend", "normal", {});
+                const blend = e.word("blend", {}, "normal");
                 const modes: { [id: string]: number } = {
                     normal: 0,
                     add: 1,
@@ -225,8 +225,8 @@ namespace rdml {
         "rotate-pict": new CmdTemplate(
             233, false,
             (e: Elem) => [
-                e.int("id", required, 0, 100),
-                e.float("speed", 0, null, null),
+                e.int("id", 0, 100, required),
+                e.float("speed", null, null, 0),
             ]
         ),
 
@@ -234,9 +234,9 @@ namespace rdml {
             234, false,
             (e: Elem) => {
                 let params: Param[] = [];
-                params[0] = e.int("id", required, 0, 100);
-                params[1] = e.split("color", 4).map(c => check.int(c, 255, 0, 255));
-                params[2] = e.int("duration", 60, 1, null);
+                params[0] = e.int("id", 0, 100, required);
+                params[1] = e.split("color", 4).map(c => check.int(c, 0, 255, 255));
+                params[2] = e.int("duration", 1, null, 60);
                 params[3] = e.bool("wait", true);
                 return params;
             }
@@ -250,9 +250,9 @@ namespace rdml {
         weather: new CmdTemplate(
             236, false,
             (e: Elem) => [
-                e.word("type", required, {}),
-                e.int("power", 5, 0, 9),
-                e.int("duration", 60, 1, null),
+                e.word("type", {}, required),
+                e.int("power", 0, 9, 5),
+                e.int("duration", 1, null, 60),
                 e.bool("wait", true),
             ]
         ),
@@ -264,7 +264,7 @@ namespace rdml {
 
         "fadeout-bgm": new CmdTemplate(
             242, false,
-            (e: Elem) => [e.float("duration", required, 0, null)]
+            (e: Elem) => [e.float("duration", 0, null, required)]
         ),
 
         "save-bgm": new CmdTemplate(
@@ -282,7 +282,7 @@ namespace rdml {
 
         "fadeout-bgs": new CmdTemplate(
             246, false,
-            (e: Elem) => [e.float("duration", required, 0, null)]
+            (e: Elem) => [e.float("duration", 0, null, required)]
         ),
 
         me: new CmdTemplate(

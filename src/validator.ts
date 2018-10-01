@@ -9,7 +9,7 @@ namespace rdml.check {
         }
     }
 
-    export function float(s: string, def: number | null, min: number | null, max: number | null): number {
+    export function float(s: string, min: number | null, max: number | null, def: number | null): number {
         if (s === undefined) {
             if (def === null) { // required
                 throw new ValError(`required`);
@@ -27,7 +27,7 @@ namespace rdml.check {
         return f;
     }
 
-    export function int(s: string, def: number | null, min: number | null, max: number | null): number {
+    export function int(s: string, min: number | null, max: number | null, def: number | null): number {
         if (s === undefined) {
             if (def === null) { // required
                 throw new ValError(`required`);
@@ -43,7 +43,7 @@ namespace rdml.check {
         return i;
     }
 
-    export function word(s: string, def: string | null, rules: stringRules): string {
+    export function word(s: string, rules: stringRules, def: string | null): string {
         if (s === undefined) {
             if (def === null) { // required
                 throw new ValError(`required`);
