@@ -383,11 +383,10 @@ var rdml;
                     this.cmds.push(gen.generate(e, depth));
                     if (gen.hasBlock) {
                         this.parseBlock(e, depth + 1);
-                    }
-                    // ブロックの末尾に閉じコマンドをさらに追加する
-                    var closer = closers[e.name];
-                    if (closer) {
-                        this.cmds.push(closer.generate(e, depth));
+                        // ブロックの末尾に閉じコマンドをさらに追加する
+                        if (e.name in closers) {
+                            this.cmds.push(closers[e.name].generate(e, depth));
+                        }
                     }
                 }
                 // 末尾に空のコマンドを追加
