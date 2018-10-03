@@ -2,6 +2,7 @@
 
 /// <reference path="desc.ts" />
 /// <reference path="xml.ts" />
+/// <reference path="proc.ts" />
 
 namespace rdml {
 
@@ -24,9 +25,6 @@ namespace rdml {
         return loaded;
     }
 
-    export function callProc(file: string, proc: string) {
-    }
-
     /**
      * Internal
      */
@@ -41,14 +39,25 @@ namespace rdml {
             this.xhr.open("GET", path);
             this.xhr.onload = () => {
                 if (this.xhr.status < 400) {
-                    this.create();
+                    this.onload();
                     this.loaded = true;
                 }
             };
             this.xhr.send();
         }
 
-        create() { }
+        // ファイルをパースし、得られた要素から変換する
+        onload() {
+            const nodes = xml.parseString(this.xhr.responseText);
+            for (const node of nodes) {
+                if (typeof node === "string") { continue; } // テキストノードは単に飛ばす
+                switch (node.name) {
+                    case "proc":
+                        proc.procs[node.word("id", {}, null)] = new proc.Proc(node);
+                        break;
+                }
+            }
+        }
     }
 }
 
@@ -67,7 +76,7 @@ namespace rdml {
 
         if (subcmd === "conditional-choices") {
             const id = Number(args[0]);
-            rdml.conditionalChoices.setup(this, id);
+            rdml.proc.conditionalChoices.setup(this, id);
             this.setWaitMode("message");
         }
     }

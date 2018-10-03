@@ -345,208 +345,334 @@ var rdml;
 /// <reference path="xml.ts" />
 var rdml;
 (function (rdml) {
-    /**
-     * Internal
-     */
-    var Proc = /** @class */ (function () {
-        function Proc() {
-            this.cmds = [];
-            this.children = {};
-        }
-        return Proc;
-    }());
-    var CmdTemplate = /** @class */ (function () {
-        function CmdTemplate(code, hasBlock, fn) {
-            this.code = code;
-            this.hasBlock = hasBlock;
-            this.fn = fn;
-        }
-        CmdTemplate.prototype.create = function (e, indent) {
-            return {
-                code: this.code,
-                indent: indent,
-                parameters: this.fn(e),
-            };
-        };
-        return CmdTemplate;
-    }());
-    var noParam = function (e) { return []; };
-    var required = null;
-    var creators = {
-        // set options, to start message
-        "message options": new CmdTemplate(101, false, function (e) { return ["", 0, 0, 2]; }),
-        // input a number
-        input: new CmdTemplate(103, false, function (e) { return [
-            indexOfVar(e.word("var", {}, required)),
-            e.int("digits", 1, null, required),
-        ]; }),
-        // select item
-        "select-item": new CmdTemplate(104, false, function (e) { return [
-            indexOfVar(e.word("var", {}, required)),
-            e.int("type", 0, 3, required),
-        ]; }),
-        // TODO scrolling message
-        // TODO scrolling message content
-        // TODO other condition types
-        "if": new CmdTemplate(111, true, function (e) { return [
-            e.attrs["js"],
-        ]; }),
-        // infinite loop
-        loop: new CmdTemplate(112, true, noParam),
-        // break loop
-        "break": new CmdTemplate(113, false, noParam),
-        // exit event
-        exit: new CmdTemplate(115, false, noParam),
-        // TODO call common event
-        // set label
-        label: new CmdTemplate(118, false, function (e) { return [e.data.trim()]; }),
-        // jump to label
-        jump: new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
-        // jump to label
-        "goto": new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
-        // TODO switch, var, timer operations
-        // TODO many commands
-        visibility: new CmdTemplate(211, false, function (e) { return [
-            rdml.check.bool(e.data, false) ? 0 : 1,
-        ]; }),
-        // tint screen
-        tint: new CmdTemplate(223, false, function (e) { return [
-            e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
-            e.int("duration", 1, null, 60),
-            e.bool("wait", true),
-        ]; }),
-        // flash screen
-        flash: new CmdTemplate(224, false, function (e) { return [
-            e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
-            e.int("duration", 1, null, 60),
-            e.bool("wait", true),
-        ]; }),
-        // shake screen
-        shake: new CmdTemplate(225, false, function (e) { return [
-            e.int("power", 0, 9, required),
-            e.int("speed", 0, 9, required),
-            e.bool("wait", true),
-        ]; }),
-        wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, 1, null, required)]; }),
-        "show-pict": new CmdTemplate(231, false, function (e) {
-            var params = [];
-            params[0] = e.int("id", 0, 100, required);
-            params[1] = e.data.trim();
-            var pos = e.split("pos", 3);
-            var origin = rdml.check.word(pos[0], {}, "lefttop");
-            if (origin === "lefttop") {
-                params[2] = 0;
+    var proc;
+    (function (proc) {
+        /**
+         * API ?
+         */
+        /**
+         * Internal
+         */
+        proc.procs = {};
+        var Proc = /** @class */ (function () {
+            function Proc(e) {
+                this.cmds = [];
+                this.children = {};
+                this.parseBlock(e, 0);
             }
-            else if (origin === "center") {
-                params[2] = 1;
-            }
-            else {
-            }
-            params[4] = rdml.check.float(pos[1], null, null, 0);
-            params[5] = rdml.check.float(pos[2], null, null, 0);
-            var scale = e.split("scale", 2);
-            params[6] = rdml.check.float(scale[0], null, null, 100);
-            params[7] = rdml.check.float(scale[1], null, null, 100);
-            params[8] = e.int("opacity", 0, 255, 255);
-            params[9] = 0; // default
-            var blend = e.word("blend", {}, "normal");
-            var modes = {
-                normal: 0,
-                add: 1,
-                multiply: 2,
-                screen: 3,
-                overlay: 4,
-                darken: 5,
-                lighten: 6,
-            };
-            if (blend in modes) {
-                params[9] = modes[blend];
-            }
-            return params;
-        }),
-        "move-pict": new CmdTemplate(232, false, function (e) {
-            return [];
-        }),
-        "rotate-pict": new CmdTemplate(233, false, function (e) { return [
-            e.int("id", 0, 100, required),
-            e.float("speed", null, null, 0),
-        ]; }),
-        "tint-pict": new CmdTemplate(234, false, function (e) {
-            var params = [];
-            params[0] = e.int("id", 0, 100, required);
-            params[1] = e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); });
-            params[2] = e.int("duration", 1, null, 60);
-            params[3] = e.bool("wait", true);
-            return params;
-        }),
-        "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", 0, 100, required)]; }),
-        weather: new CmdTemplate(236, false, function (e) { return [
-            e.word("type", {}, required),
-            e.int("power", 0, 9, 5),
-            e.int("duration", 1, null, 60),
-            e.bool("wait", true),
-        ]; }),
-        bgm: new CmdTemplate(241, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.float("duration", 0, null, required)]; }),
-        "save-bgm": new CmdTemplate(243, false, noParam),
-        "resume-bgm": new CmdTemplate(244, false, noParam),
-        bgs: new CmdTemplate(245, false, function (e) { return [e.data.trim()]; }),
-        "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.float("duration", 0, null, required)]; }),
-        me: new CmdTemplate(249, false, function (e) { return [e.data.trim()]; }),
-        se: new CmdTemplate(250, false, function (e) { return [e.data.trim()]; }),
-        "stop-se": new CmdTemplate(251, false, noParam),
-        movie: new CmdTemplate(261, false, function (e) { return [e.data.trim()]; }),
-        menu: new CmdTemplate(351, false, noParam),
-        save: new CmdTemplate(352, false, noParam),
-        "game-over": new CmdTemplate(353, false, noParam),
-        title: new CmdTemplate(354, false, noParam),
-        script: new CmdTemplate(356, false, function (e) { return [e.data]; }),
-        // wrapped by fadeout and fadein
-        hidden: new CmdTemplate(221, true, noParam),
-    };
-    // }}}
-    /**
-     * 条件付き選択肢の実装
-     */
-    var conditionalChoices;
-    (function (conditionalChoices) {
-        var cmds = [];
-        function push(cmd) {
-            cmds.push(cmd);
-            return cmds.length - 1;
-        }
-        conditionalChoices.push = push;
-        function setup(i, id) {
-            var cmd = cmds[id];
-            // 呼ばれた時点で条件を満たす選択肢のみ集める
-            // 選択肢(シンボル)と表示名は別
-            var symbols = [];
-            var texts = [];
-            for (var j = 0; j < cmd.symbols.length; j++) {
-                if (cmd.conds[j] === "" || !!eval(cmd.conds[j])) {
-                    symbols.push(cmd.symbols[j]);
-                    texts.push(cmd.texts[j]);
+            Proc.prototype.parseBlock = function (parent, depth) {
+                for (var _i = 0, _a = parent.children; _i < _a.length; _i++) {
+                    var e = _a[_i];
+                    // special cases
+                    switch (e.name) {
+                        case "m":
+                            this.parseMessage(e, depth);
+                            continue;
+                    }
+                    // normal command
+                    // コマンド生成メソッド一覧から選択する
+                    var gen = generators[e.name];
+                    this.cmds.push(gen.generate(e, depth));
+                    if (gen.hasBlock) {
+                        this.parseBlock(e, depth + 1);
+                    }
+                    // ブロックの末尾に閉じコマンドをさらに追加する
+                    var closer = closers[e.name];
+                    if (closer) {
+                        this.cmds.push(closer.generate(e, depth));
+                    }
                 }
+            };
+            Proc.prototype.parseMessage = function (parent, depth) {
+                var children = parent.children;
+                // 子elementを選択肢として追加する
+                var symbols = [];
+                var texts = [];
+                var conds = [];
+                for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
+                    var e = children_1[_i];
+                    symbols.push(e.name);
+                    texts.push(e.word("text", {}, required));
+                    conds.push(e.word("cond", {}, ""));
+                }
+                // TODO parameter validation
+                var id = conditionalChoices.push({
+                    symbols: symbols,
+                    texts: texts,
+                    conds: conds,
+                    defaultType: 0,
+                    cancelType: 0,
+                    positionType: 2,
+                    background: 0,
+                });
+                // 自身はプラグインコマンドとして追加する
+                this.cmds.push({
+                    code: 102,
+                    indent: depth,
+                    parameters: ["rdml conditional-choices " + id],
+                });
+                for (var i = 0; i < symbols.length; i++) {
+                    this.cmds.push({
+                        code: 402,
+                        indent: depth + 1,
+                        parameters: [i, texts[i]],
+                    });
+                    this.parseBlock(children[i], depth + 2);
+                }
+            };
+            Proc.prototype.createMessage = function (parent, depth) {
+                // メッセージ用のテキスト処理を行う
+                // 空行は数を数えておいて、次にテキストがあれば空行分を追加
+                // なければ無視する。
+                var blanks = 0;
+                var started = false;
+                var lines = parent.data.split(/\r\n|\r|\n/);
+                for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
+                    var line = lines_1[_i];
+                    var t = line.trim();
+                    if (t === "") {
+                        blanks++;
+                        continue;
+                    }
+                    var begin = t.slice(0, 1);
+                    var end = t.slice(-1);
+                    if (begin === ":" && end == ":" && t.length >= 2) {
+                        // header inside of colons
+                        var str = t.slice(1, t.length - 1);
+                        this.pushMessageHeader(depth, str);
+                        started = true;
+                        blanks = 0;
+                        continue;
+                    }
+                    if (!started) {
+                        // 暗黙の地の文
+                        this.pushMessageHeader(depth, "*");
+                        started = true;
+                        blanks = 0;
+                    }
+                    // push blank lines
+                    for (var i = 0; i < blanks; i++) {
+                        this.cmds.push({
+                            code: 401,
+                            indent: depth,
+                            parameters: [""],
+                        });
+                    }
+                    blanks = 0;
+                    // push text
+                    this.cmds.push({
+                        code: 401,
+                        indent: depth,
+                        parameters: [t],
+                    });
+                }
+            };
+            Proc.prototype.pushMessageHeader = function (depth, str) {
+                // TODO
+                this.cmds.push({
+                    code: 101,
+                    indent: depth,
+                    parameters: ["", 0, 0, 2],
+                });
+            };
+            return Proc;
+        }());
+        proc.Proc = Proc;
+        var CmdTemplate = /** @class */ (function () {
+            function CmdTemplate(code, hasBlock, fn) {
+                this.code = code;
+                this.hasBlock = hasBlock;
+                this.fn = fn;
             }
-            var cancelType = cmd.cancelType >= symbols.length ? -2 : cmd.cancelType;
-            $gameMessage.setChoices(texts, cmd.defaultType, cancelType);
-            $gameMessage.setChoiceBackground(cmd.background);
-            $gameMessage.setChoicePositionType(cmd.positionType);
-            // コールバックの中身が重要
-            $gameMessage.setChoiceCallback(function (n) {
-                // 有効な選択肢のみが表示されている
-                // -> nとsymbolsから選択肢固有のシンボルを得る
-                // -> シンボルと全体のシンボルリストを照らし合わせてインデックスを得る
-                var sym = symbols[n];
-                this._branch[this._indent] = cmd.symbols.indexOf(sym);
-            }.bind(i));
-        }
-        conditionalChoices.setup = setup;
-    })(conditionalChoices = rdml.conditionalChoices || (rdml.conditionalChoices = {}));
+            CmdTemplate.prototype.generate = function (e, indent) {
+                return {
+                    code: this.code,
+                    indent: indent,
+                    parameters: this.fn(e),
+                };
+            };
+            return CmdTemplate;
+        }());
+        var noParam = function (e) { return []; };
+        var required = null;
+        var generators = {
+            // set options, to start message
+            "message options": new CmdTemplate(101, false, function (e) { return ["", 0, 0, 2]; }),
+            // input a number
+            input: new CmdTemplate(103, false, function (e) { return [
+                indexOfVar(e.word("var", {}, required)),
+                e.int("digits", 1, null, required),
+            ]; }),
+            // select item
+            "select-item": new CmdTemplate(104, false, function (e) { return [
+                indexOfVar(e.word("var", {}, required)),
+                e.int("type", 0, 3, required),
+            ]; }),
+            // TODO scrolling message
+            // TODO scrolling message content
+            // TODO other condition types
+            "if": new CmdTemplate(111, true, function (e) { return [
+                e.attrs["js"],
+            ]; }),
+            // infinite loop
+            loop: new CmdTemplate(112, true, noParam),
+            // break loop
+            "break": new CmdTemplate(113, false, noParam),
+            // exit event
+            exit: new CmdTemplate(115, false, noParam),
+            // TODO call common event
+            // set label
+            label: new CmdTemplate(118, false, function (e) { return [e.data.trim()]; }),
+            // jump to label
+            jump: new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
+            // jump to label
+            "goto": new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
+            // TODO switch, var, timer operations
+            // TODO many commands
+            visibility: new CmdTemplate(211, false, function (e) { return [
+                rdml.check.bool(e.data, false) ? 0 : 1,
+            ]; }),
+            // tint screen
+            tint: new CmdTemplate(223, false, function (e) { return [
+                e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
+                e.int("duration", 1, null, 60),
+                e.bool("wait", true),
+            ]; }),
+            // flash screen
+            flash: new CmdTemplate(224, false, function (e) { return [
+                e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); }),
+                e.int("duration", 1, null, 60),
+                e.bool("wait", true),
+            ]; }),
+            // shake screen
+            shake: new CmdTemplate(225, false, function (e) { return [
+                e.int("power", 0, 9, required),
+                e.int("speed", 0, 9, required),
+                e.bool("wait", true),
+            ]; }),
+            wait: new CmdTemplate(230, false, function (e) { return [rdml.check.int(e.data, 1, null, required)]; }),
+            "show-pict": new CmdTemplate(231, false, function (e) {
+                var params = [];
+                params[0] = e.int("id", 0, 100, required);
+                params[1] = e.data.trim();
+                var pos = e.split("pos", 3);
+                var origin = rdml.check.word(pos[0], {}, "lefttop");
+                if (origin === "lefttop") {
+                    params[2] = 0;
+                }
+                else if (origin === "center") {
+                    params[2] = 1;
+                }
+                else {
+                }
+                params[4] = rdml.check.float(pos[1], null, null, 0);
+                params[5] = rdml.check.float(pos[2], null, null, 0);
+                var scale = e.split("scale", 2);
+                params[6] = rdml.check.float(scale[0], null, null, 100);
+                params[7] = rdml.check.float(scale[1], null, null, 100);
+                params[8] = e.int("opacity", 0, 255, 255);
+                params[9] = 0; // default
+                var blend = e.word("blend", {}, "normal");
+                var modes = {
+                    normal: 0,
+                    add: 1,
+                    multiply: 2,
+                    screen: 3,
+                    overlay: 4,
+                    darken: 5,
+                    lighten: 6,
+                };
+                if (blend in modes) {
+                    params[9] = modes[blend];
+                }
+                return params;
+            }),
+            "move-pict": new CmdTemplate(232, false, function (e) {
+                return [];
+            }),
+            "rotate-pict": new CmdTemplate(233, false, function (e) { return [
+                e.int("id", 0, 100, required),
+                e.float("speed", null, null, 0),
+            ]; }),
+            "tint-pict": new CmdTemplate(234, false, function (e) {
+                var params = [];
+                params[0] = e.int("id", 0, 100, required);
+                params[1] = e.split("color", 4).map(function (c) { return rdml.check.int(c, 0, 255, 255); });
+                params[2] = e.int("duration", 1, null, 60);
+                params[3] = e.bool("wait", true);
+                return params;
+            }),
+            "erase-pict": new CmdTemplate(235, false, function (e) { return [e.int("id", 0, 100, required)]; }),
+            weather: new CmdTemplate(236, false, function (e) { return [
+                e.word("type", {}, required),
+                e.int("power", 0, 9, 5),
+                e.int("duration", 1, null, 60),
+                e.bool("wait", true),
+            ]; }),
+            bgm: new CmdTemplate(241, false, function (e) { return [e.data.trim()]; }),
+            "fadeout-bgm": new CmdTemplate(242, false, function (e) { return [e.float("duration", 0, null, required)]; }),
+            "save-bgm": new CmdTemplate(243, false, noParam),
+            "resume-bgm": new CmdTemplate(244, false, noParam),
+            bgs: new CmdTemplate(245, false, function (e) { return [e.data.trim()]; }),
+            "fadeout-bgs": new CmdTemplate(246, false, function (e) { return [e.float("duration", 0, null, required)]; }),
+            me: new CmdTemplate(249, false, function (e) { return [e.data.trim()]; }),
+            se: new CmdTemplate(250, false, function (e) { return [e.data.trim()]; }),
+            "stop-se": new CmdTemplate(251, false, noParam),
+            movie: new CmdTemplate(261, false, function (e) { return [e.data.trim()]; }),
+            menu: new CmdTemplate(351, false, noParam),
+            save: new CmdTemplate(352, false, noParam),
+            "game-over": new CmdTemplate(353, false, noParam),
+            title: new CmdTemplate(354, false, noParam),
+            script: new CmdTemplate(356, false, function (e) { return [e.data]; }),
+            // wrapped by fadeout and fadein
+            hidden: new CmdTemplate(221, true, noParam),
+        };
+        var closers = {};
+        // }}}
+        /**
+         * 条件付き選択肢の実装
+         */
+        var conditionalChoices;
+        (function (conditionalChoices) {
+            var cmds = [];
+            function push(cmd) {
+                cmds.push(cmd);
+                return cmds.length - 1;
+            }
+            conditionalChoices.push = push;
+            function setup(i, id) {
+                var cmd = cmds[id];
+                // 呼ばれた時点で条件を満たす選択肢のみ集める
+                // 選択肢(シンボル)と表示名は別
+                var symbols = [];
+                var texts = [];
+                for (var j = 0; j < cmd.symbols.length; j++) {
+                    if (cmd.conds[j] === "" || !!eval(cmd.conds[j])) {
+                        symbols.push(cmd.symbols[j]);
+                        texts.push(cmd.texts[j]);
+                    }
+                }
+                var cancelType = cmd.cancelType >= symbols.length ? -2 : cmd.cancelType;
+                $gameMessage.setChoices(texts, cmd.defaultType, cancelType);
+                $gameMessage.setChoiceBackground(cmd.background);
+                $gameMessage.setChoicePositionType(cmd.positionType);
+                // コールバックの中身が重要
+                $gameMessage.setChoiceCallback(function (n) {
+                    // 有効な選択肢のみが表示されている
+                    // -> nとsymbolsから選択肢固有のシンボルを得る
+                    // -> シンボルと全体のシンボルリストを照らし合わせてインデックスを得る
+                    var sym = symbols[n];
+                    this._branch[this._indent] = cmd.symbols.indexOf(sym);
+                }.bind(i));
+            }
+            conditionalChoices.setup = setup;
+        })(conditionalChoices = proc.conditionalChoices || (proc.conditionalChoices = {}));
+    })(proc = rdml.proc || (rdml.proc = {}));
 })(rdml || (rdml = {}));
 /* rdml.ts: core rdml loader */
 /// <reference path="desc.ts" />
 /// <reference path="xml.ts" />
+/// <reference path="proc.ts" />
 var rdml;
 (function (rdml) {
     /**
@@ -568,9 +694,6 @@ var rdml;
         return loaded;
     }
     rdml.hasLoaded = hasLoaded;
-    function callProc(file, proc) {
-    }
-    rdml.callProc = callProc;
     /**
      * Internal
      */
@@ -585,13 +708,27 @@ var rdml;
             this.xhr.open("GET", path);
             this.xhr.onload = function () {
                 if (_this.xhr.status < 400) {
-                    _this.create();
+                    _this.onload();
                     _this.loaded = true;
                 }
             };
             this.xhr.send();
         }
-        File.prototype.create = function () { };
+        // ファイルをパースし、得られた要素から変換する
+        File.prototype.onload = function () {
+            var nodes = rdml.xml.parseString(this.xhr.responseText);
+            for (var _i = 0, nodes_1 = nodes; _i < nodes_1.length; _i++) {
+                var node = nodes_1[_i];
+                if (typeof node === "string") {
+                    continue;
+                } // テキストノードは単に飛ばす
+                switch (node.name) {
+                    case "proc":
+                        rdml.proc.procs[node.word("id", {}, null)] = new rdml.proc.Proc(node);
+                        break;
+                }
+            }
+        };
         return File;
     }());
 })(rdml || (rdml = {}));
@@ -608,7 +745,7 @@ var rdml;
         }
         if (subcmd === "conditional-choices") {
             var id = Number(args[0]);
-            rdml.conditionalChoices.setup(this, id);
+            rdml.proc.conditionalChoices.setup(this, id);
             this.setWaitMode("message");
         }
     };

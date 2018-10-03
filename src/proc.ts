@@ -5,11 +5,156 @@
 declare function indexOfMap(name: string): number;
 declare function indexOfVar(name: string): number;
 
-namespace rdml {
+namespace rdml.proc {
+
+    /**
+     * API ?
+     */
 
     /**
      * Internal
      */
+    export let procs: { [id: string]: Proc } = {};
+
+    export class Proc {
+        cmds: MVCmd[] = [];
+        children: { [id: string]: Proc } = {};
+
+        constructor(e: Elem) {
+            this.parseBlock(e, 0);
+        }
+
+        parseBlock(parent: Elem, depth: number) {
+
+            for (const e of parent.children) {
+
+                // special cases
+                switch (e.name) {
+                    case "m":
+                        this.parseMessage(e, depth);
+                        continue;
+                }
+
+                // normal command
+                // コマンド生成メソッド一覧から選択する
+                const gen = generators[e.name];
+                this.cmds.push(gen.generate(e, depth));
+                if (gen.hasBlock) {
+                    this.parseBlock(e, depth + 1);
+                }
+
+                // ブロックの末尾に閉じコマンドをさらに追加する
+                const closer = closers[e.name];
+                if (closer) {
+                    this.cmds.push(closer.generate(e, depth));
+                }
+            }
+        }
+
+        parseMessage(parent: Elem, depth: number) {
+
+            const children = parent.children;
+
+            // 子elementを選択肢として追加する
+            let symbols: string[] = [];
+            let texts: string[] = [];
+            let conds: string[] = [];
+            for (const e of children) {
+                symbols.push(e.name);
+                texts.push(e.word("text", {}, required));
+                conds.push(e.word("cond", {}, ""));
+            }
+
+            // TODO parameter validation
+            const id = conditionalChoices.push({
+                symbols: symbols,
+                texts: texts,
+                conds: conds,
+                defaultType: 0,
+                cancelType: 0,
+                positionType: 2,
+                background: 0,
+            });
+
+            // 自身はプラグインコマンドとして追加する
+            this.cmds.push({
+                code: 102,
+                indent: depth,
+                parameters: ["rdml conditional-choices " + id],
+            });
+
+            for (let i = 0; i < symbols.length; i++) {
+                this.cmds.push({
+                    code: 402,
+                    indent: depth + 1,
+                    parameters: [i, texts[i]],
+                });
+                this.parseBlock(children[i], depth + 2);
+            }
+        }
+
+        createMessage(parent: Elem, depth: number) {
+
+            // メッセージ用のテキスト処理を行う
+            // 空行は数を数えておいて、次にテキストがあれば空行分を追加
+            // なければ無視する。
+            let blanks = 0;
+            let started = false;
+            const lines = parent.data.split(/\r\n|\r|\n/);
+
+            for (const line of lines) {
+                const t = line.trim();
+                if (t === "") {
+                    blanks++;
+                    continue;
+                }
+
+                const begin = t.slice(0, 1);
+                const end = t.slice(-1);
+                if (begin === ":" && end == ":" && t.length >= 2) {
+                    // header inside of colons
+                    const str = t.slice(1, t.length - 1);
+                    this.pushMessageHeader(depth, str);
+                    started = true;
+                    blanks = 0;
+                    continue;
+                }
+
+                if (!started) {
+                    // 暗黙の地の文
+                    this.pushMessageHeader(depth, "*");
+                    started = true;
+                    blanks = 0;
+                }
+
+                // push blank lines
+                for (let i = 0; i < blanks; i++) {
+                    this.cmds.push({
+                        code: 401,
+                        indent: depth,
+                        parameters: [""],
+                    });
+                }
+                blanks = 0;
+
+                // push text
+                this.cmds.push({
+                    code: 401,
+                    indent: depth,
+                    parameters: [t],
+                });
+            }
+        }
+
+        pushMessageHeader(depth: number, str: string) {
+            // TODO
+            this.cmds.push({
+                code: 101,
+                indent: depth,
+                parameters: ["", 0, 0, 2],
+            });
+        }
+    }
 
     type Param = string | number | boolean | number[];
     type Elem = xml.Element;
@@ -20,17 +165,12 @@ namespace rdml {
         parameters: Param[];
     }
 
-    class Proc {
-        cmds: MVCmd[] = [];
-        children: { [id: string]: Proc } = {};
-    }
-
     /**
      * コマンド定義
      */
     // {{{ Command definitions
-    interface CmdCreator {
-        create(e: xml.Element, indent: number): MVCmd;
+    interface CmdGenerator {
+        generate(e: xml.Element, indent: number): MVCmd;
         hasBlock: boolean;
     }
 
@@ -41,7 +181,7 @@ namespace rdml {
             public fn: (e: xml.Element) => Param[],
         ) { }
 
-        create(e: Elem, indent: number): MVCmd {
+        generate(e: Elem, indent: number): MVCmd {
             return {
                 code: this.code,
                 indent: indent,
@@ -53,7 +193,7 @@ namespace rdml {
     const noParam = (e: Elem) => [];
     const required = null;
 
-    const creators: { [id: string]: CmdCreator } = {
+    const generators: { [id: string]: CmdGenerator } = {
 
         // set options, to start message
         "message options": new CmdTemplate(
@@ -330,6 +470,8 @@ namespace rdml {
             221, true, noParam
         ),
     };
+
+    const closers: { [id: string]: CmdGenerator } = {};
     // }}}
 
     /**
