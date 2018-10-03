@@ -72,10 +72,17 @@ namespace rdml {
         const subcmd = args[0];
         if (subcmd === "load") {
             rdml.load(args[1]);
+            if (!rdml.hasLoaded()) {
+                this.setWaitMode("rdml loading");
+            }
+        }
+
+        if (subcmd === "proc") {
+            rdml.proc.call(this, args[1]);
         }
 
         if (subcmd === "conditional-choices") {
-            const id = Number(args[0]);
+            const id = Number(args[1]);
             rdml.proc.conditionalChoices.setup(this, id);
             this.setWaitMode("message");
         }

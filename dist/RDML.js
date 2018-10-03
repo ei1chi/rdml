@@ -353,6 +353,11 @@ var rdml;
         /**
          * Internal
          */
+        function call(i, id) {
+            var cmds = proc.procs[id].cmds;
+            i.setupChild(cmds, 0);
+        }
+        proc.call = call;
         proc.procs = {};
         var Proc = /** @class */ (function () {
             function Proc(e) {
@@ -385,6 +390,12 @@ var rdml;
                         this.cmds.push(closer.generate(e, depth));
                     }
                 }
+                // 末尾に空のコマンドを追加
+                this.cmds.push({
+                    code: 0,
+                    indent: depth,
+                    parameters: [],
+                });
             };
             Proc.prototype.parseChoices = function (parent, depth) {
                 var children = parent.children;
@@ -410,17 +421,17 @@ var rdml;
                 });
                 // 自身はプラグインコマンドとして追加する
                 this.cmds.push({
-                    code: 102,
+                    code: 356,
                     indent: depth,
                     parameters: ["rdml conditional-choices " + id],
                 });
                 for (var i = 0; i < symbols.length; i++) {
                     this.cmds.push({
                         code: 402,
-                        indent: depth + 1,
+                        indent: depth,
                         parameters: [i, texts[i]],
                     });
-                    this.parseBlock(children[i], depth + 2);
+                    this.parseBlock(children[i], depth + 1);
                 }
             };
             Proc.prototype.parseMessage = function (parent, depth) {
@@ -530,6 +541,16 @@ var rdml;
             jump: new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
             // jump to label
             "goto": new CmdTemplate(119, false, function (e) { return [e.data.trim()]; }),
+            // switch on (single operation)
+            "sw-on": new CmdTemplate(121, false, function (e) {
+                var id = Number(e.data.trim());
+                return [id, id, 0];
+            }),
+            // switch off (single operation)
+            "sw-off": new CmdTemplate(121, false, function (e) {
+                var id = Number(e.data.trim());
+                return [id, id, 1];
+            }),
             // TODO switch, var, timer operations
             // TODO many commands
             visibility: new CmdTemplate(211, false, function (e) { return [
@@ -745,9 +766,15 @@ var rdml;
         var subcmd = args[0];
         if (subcmd === "load") {
             rdml.load(args[1]);
+            if (!rdml.hasLoaded()) {
+                this.setWaitMode("rdml loading");
+            }
+        }
+        if (subcmd === "proc") {
+            rdml.proc.call(this, args[1]);
         }
         if (subcmd === "conditional-choices") {
-            var id = Number(args[0]);
+            var id = Number(args[1]);
             rdml.proc.conditionalChoices.setup(this, id);
             this.setWaitMode("message");
         }

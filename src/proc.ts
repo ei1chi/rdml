@@ -14,6 +14,11 @@ namespace rdml.proc {
     /**
      * Internal
      */
+    export function call(i: Game_Interpreter, id: string) {
+        const cmds: MVCmd[] = procs[id].cmds;
+        i.setupChild(cmds, 0);
+    }
+
     export let procs: { [id: string]: Proc } = {};
 
     export class Proc {
@@ -52,6 +57,13 @@ namespace rdml.proc {
                     this.cmds.push(closer.generate(e, depth));
                 }
             }
+
+            // 末尾に空のコマンドを追加
+            this.cmds.push({
+                code: 0,
+                indent: depth,
+                parameters: [],
+            });
         }
 
         parseChoices(parent: Elem, depth: number) {
@@ -81,7 +93,7 @@ namespace rdml.proc {
 
             // 自身はプラグインコマンドとして追加する
             this.cmds.push({
-                code: 102,
+                code: 356,
                 indent: depth,
                 parameters: ["rdml conditional-choices " + id],
             });
@@ -89,10 +101,10 @@ namespace rdml.proc {
             for (let i = 0; i < symbols.length; i++) {
                 this.cmds.push({
                     code: 402,
-                    indent: depth + 1,
+                    indent: depth,
                     parameters: [i, texts[i]],
                 });
-                this.parseBlock(children[i], depth + 2);
+                this.parseBlock(children[i], depth + 1);
             }
         }
 
@@ -266,6 +278,24 @@ namespace rdml.proc {
         "goto": new CmdTemplate(
             119, false,
             (e: Elem) => [e.data.trim()]
+        ),
+
+        // switch on (single operation)
+        "sw-on": new CmdTemplate(
+            121, false,
+            (e: Elem) => {
+                const id = Number(e.data.trim());
+                return [id, id, 0];
+            }
+        ),
+
+        // switch off (single operation)
+        "sw-off": new CmdTemplate(
+            121, false,
+            (e: Elem) => {
+                const id = Number(e.data.trim());
+                return [id, id, 1];
+            }
         ),
 
         // TODO switch, var, timer operations
