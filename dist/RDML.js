@@ -368,6 +368,9 @@ var rdml;
                         case "m":
                             this.parseMessage(e, depth);
                             continue;
+                        case "choice":
+                            this.parseChoices(e, depth);
+                            continue;
                     }
                     // normal command
                     // コマンド生成メソッド一覧から選択する
@@ -383,7 +386,7 @@ var rdml;
                     }
                 }
             };
-            Proc.prototype.parseMessage = function (parent, depth) {
+            Proc.prototype.parseChoices = function (parent, depth) {
                 var children = parent.children;
                 // 子elementを選択肢として追加する
                 var symbols = [];
@@ -420,7 +423,7 @@ var rdml;
                     this.parseBlock(children[i], depth + 2);
                 }
             };
-            Proc.prototype.createMessage = function (parent, depth) {
+            Proc.prototype.parseMessage = function (parent, depth) {
                 // メッセージ用のテキスト処理を行う
                 // 空行は数を数えておいて、次にテキストがあれば空行分を追加
                 // なければ無視する。

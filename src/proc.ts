@@ -33,6 +33,9 @@ namespace rdml.proc {
                     case "m":
                         this.parseMessage(e, depth);
                         continue;
+                    case "choice":
+                        this.parseChoices(e, depth);
+                        continue;
                 }
 
                 // normal command
@@ -51,7 +54,7 @@ namespace rdml.proc {
             }
         }
 
-        parseMessage(parent: Elem, depth: number) {
+        parseChoices(parent: Elem, depth: number) {
 
             const children = parent.children;
 
@@ -93,7 +96,7 @@ namespace rdml.proc {
             }
         }
 
-        createMessage(parent: Elem, depth: number) {
+        parseMessage(parent: Elem, depth: number) {
 
             // メッセージ用のテキスト処理を行う
             // 空行は数を数えておいて、次にテキストがあれば空行分を追加
