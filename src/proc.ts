@@ -23,6 +23,7 @@ namespace rdml.proc {
 
     export class Proc {
         cmds: MVCmd[] = [];
+        lastCmd: MVCmd | null = null;
         children: { [id: string]: Proc } = {};
 
         constructor(e: Elem) {
@@ -40,6 +41,9 @@ namespace rdml.proc {
                         continue;
                     case "choice":
                         this.parseChoices(e, depth);
+                        continue;
+                    case "else":
+                        this.parseElse(e, depth);
                         continue;
                 }
 
@@ -166,6 +170,17 @@ namespace rdml.proc {
                 code: 101,
                 indent: depth,
                 parameters: ["", 0, 0, 2],
+            });
+        }
+
+        parseElse(parent: Elem, depth: number) {
+            if (this.lastCmd === null || this.lastCmd.code !== 111) {
+                return;
+            }
+            this.cmds.push({
+                code: 110,
+                indent: depth,
+                parameters: [],
             });
         }
     }
