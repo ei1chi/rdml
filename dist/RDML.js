@@ -21,6 +21,37 @@
  * rdml proc sample.html hello-world
  * rdml apply db.html
  */
+/* mapper.ts: mapping object names to ids */
+var rdml;
+(function (rdml) {
+    var mapper;
+    (function (mapper) {
+        mapper.vars = {};
+        mapper.sws = {};
+        mapper.ssws = {};
+        mapper.maps = {};
+    })(mapper = rdml.mapper || (rdml.mapper = {}));
+})(rdml || (rdml = {}));
+(function () {
+    var __createGameObjects = DataManager.createGameObjects;
+    DataManager.createGameObjects = function () {
+        __createGameObjects.call(this);
+        for (var i = 0; i < $dataSystem.variables.length; i++) {
+            var name_1 = $dataSystem.variables[i];
+            if (name_1 === "") {
+                continue;
+            }
+            rdml.mapper.vars[name_1] = i;
+        }
+        for (var _i = 0, $dataMapInfos_1 = $dataMapInfos; _i < $dataMapInfos_1.length; _i++) {
+            var m = $dataMapInfos_1[_i];
+            if (m === null) {
+                continue;
+            }
+            rdml.mapper.maps[m.name] = m.id;
+        }
+    };
+})();
 /* xml.ts: pseudo, lightweight xml parser */
 /// <reference path="desc.ts" />
 var rdml;
@@ -160,9 +191,9 @@ var rdml;
                             this.pos++;
                             var start = this.pos;
                             this.seekTo(gt);
-                            var name_1 = this.slice(start);
-                            if (name_1 !== parentName) {
-                                this.pushError("tag names mismatch, open='" + parentName + "', close='" + name_1 + "'");
+                            var name_2 = this.slice(start);
+                            if (name_2 !== parentName) {
+                                this.pushError("tag names mismatch, open='" + parentName + "', close='" + name_2 + "'");
                             }
                             return children;
                         }
@@ -362,6 +393,7 @@ var rdml;
         var Proc = /** @class */ (function () {
             function Proc(e) {
                 this.cmds = [];
+                this.lastCmd = null;
                 this.children = {};
                 this.parseBlock(e, 0);
             }
@@ -375,6 +407,9 @@ var rdml;
                             continue;
                         case "choice":
                             this.parseChoices(e, depth);
+                            continue;
+                        case "else":
+                            this.parseElse(e, depth);
                             continue;
                     }
                     // normal command
@@ -488,6 +523,16 @@ var rdml;
                     parameters: ["", 0, 0, 2],
                 });
             };
+            Proc.prototype.parseElse = function (parent, depth) {
+                if (this.lastCmd === null || this.lastCmd.code !== 111) {
+                    return;
+                }
+                this.cmds.push({
+                    code: 110,
+                    indent: depth,
+                    parameters: [],
+                });
+            };
             return Proc;
         }());
         proc.Proc = Proc;
@@ -552,6 +597,14 @@ var rdml;
             }),
             // TODO switch, var, timer operations
             // TODO many commands
+            transfer: new CmdTemplate(201, false, function (e) { return [
+                0,
+                rdml.mapper.maps[e.word("map", {}, required)],
+                0,
+                0,
+                0,
+                0,
+            ]; }),
             visibility: new CmdTemplate(211, false, function (e) { return [
                 rdml.check.bool(e.data, false) ? 0 : 1,
             ]; }),
@@ -710,8 +763,8 @@ var rdml;
     rdml.load = load;
     function hasLoaded() {
         var loaded = true;
-        for (var name_2 in files) {
-            var file = files[name_2];
+        for (var name_3 in files) {
+            var file = files[name_3];
             loaded = loaded && file.loaded;
         }
         return loaded;

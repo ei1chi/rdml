@@ -2,7 +2,6 @@
 
 /// <reference path="xml.ts" />
 
-declare function indexOfMap(name: string): number;
 declare function indexOfVar(name: string): number;
 
 namespace rdml.proc {
@@ -314,6 +313,18 @@ namespace rdml.proc {
 
         // TODO switch, var, timer operations
         // TODO many commands
+
+        transfer: new CmdTemplate(
+            201, false,
+            (e: Elem) => [
+                0, // TODO
+                mapper.maps[e.word("map", {}, required)],
+                0, // TODO
+                0, // TODO
+                0, // TODO
+                0, // TODO
+            ]
+        ),
 
         visibility: new CmdTemplate(
             211, false,

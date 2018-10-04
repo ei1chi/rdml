@@ -6,6 +6,7 @@ namespace rdml.mapper {
     export let vars: Mapper = {};
     export let sws: Mapper = {};
     export let ssws: Mapper = {};
+    export let maps: Mapper = {};
 }
 
 (() => {
@@ -18,6 +19,11 @@ namespace rdml.mapper {
             const name = $dataSystem.variables[i];
             if (name === "") { continue; }
             rdml.mapper.vars[name] = i;
+        }
+
+        for (const m of $dataMapInfos) {
+            if (m === null) { continue; }
+            rdml.mapper.maps[m.name] = m.id;
         }
     }
 })();
