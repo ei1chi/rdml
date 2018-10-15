@@ -50,7 +50,7 @@ namespace rdml.proc {
                 // コマンド生成メソッド一覧から選択する
                 const gen = generators[e.name];
                 this.cmds.push(gen.generate(e, depth));
-                if (gen.hasBlock) {
+                if (gen.needsChildren) {
                     this.parseBlock(e, depth + 1);
 
                     // ブロックの末尾に閉じコマンドをさらに追加する
@@ -199,13 +199,13 @@ namespace rdml.proc {
     // {{{ Command definitions
     interface CmdGenerator {
         generate(e: xml.Element, indent: number): MVCmd;
-        hasBlock: boolean;
+        needsChildren: boolean;
     }
 
     class CmdTemplate {
         constructor(
             public code: number,
-            public hasBlock: boolean,
+            public needsChildren: boolean,
             public fn: (e: xml.Element) => Param[],
         ) { }
 
