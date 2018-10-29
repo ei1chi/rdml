@@ -221,6 +221,48 @@ namespace rdml.proc {
     const noParam = (e: Elem) => [];
     const required = null;
 
+    function toPictParams(e: Elem) {
+        let params: Param[] = [];
+
+        params[0] = e.int("id", 0, 100, required);
+        params[1] = e.data.trim();
+
+        const pos = e.split("pos", 3);
+        const origin = check.word(pos[0], {}, "lefttop");
+        if (origin === "lefttop") {
+            params[2] = 0;
+        } else if (origin === "center") {
+            params[2] = 1;
+        } else {
+        }
+
+        params[4] = check.float(pos[1], null, null, 0);
+        params[5] = check.float(pos[2], null, null, 0);
+
+        const scale = e.split("scale", 2);
+        params[6] = check.float(scale[0], null, null, 100);
+        params[7] = check.float(scale[1], null, null, 100);
+
+        params[8] = e.int("opacity", 0, 255, 255);
+
+        params[9] = 0; // default
+        const blend = e.word("blend", {}, "normal");
+        const modes: { [id: string]: number } = {
+            normal: 0,
+            add: 1,
+            multiply: 2,
+            screen: 3,
+            overlay: 4,
+            darken: 5,
+            lighten: 6,
+        }
+        if (blend in modes) {
+            params[9] = modes[blend];
+        }
+
+        return params;
+    }
+
     const generators: { [id: string]: CmdGenerator } = {
 
         // set options, to start message
@@ -371,52 +413,18 @@ namespace rdml.proc {
         "show-pict": new CmdTemplate(
             231, false,
             (e: Elem) => {
-                let params: Param[] = [];
-
-                params[0] = e.int("id", 0, 100, required);
-                params[1] = e.data.trim();
-
-                const pos = e.split("pos", 3);
-                const origin = check.word(pos[0], {}, "lefttop");
-                if (origin === "lefttop") {
-                    params[2] = 0;
-                } else if (origin === "center") {
-                    params[2] = 1;
-                } else {
-                }
-
-                params[4] = check.float(pos[1], null, null, 0);
-                params[5] = check.float(pos[2], null, null, 0);
-
-                const scale = e.split("scale", 2);
-                params[6] = check.float(scale[0], null, null, 100);
-                params[7] = check.float(scale[1], null, null, 100);
-
-                params[8] = e.int("opacity", 0, 255, 255);
-
-                params[9] = 0; // default
-                const blend = e.word("blend", {}, "normal");
-                const modes: { [id: string]: number } = {
-                    normal: 0,
-                    add: 1,
-                    multiply: 2,
-                    screen: 3,
-                    overlay: 4,
-                    darken: 5,
-                    lighten: 6,
-                }
-                if (blend in modes) {
-                    params[9] = modes[blend];
-                }
-
-                return params;
+                return toPictParams(e);
             }
         ),
 
         "move-pict": new CmdTemplate(
             232, false,
             (e: Elem) => {
-                return [];
+                let params: Param[] = toPictParams(e);
+                params[10] = e.int("duration", 1, null, required);
+                params[11] = e.bool("wait", false);
+
+                return params;
             }
         ),
 
